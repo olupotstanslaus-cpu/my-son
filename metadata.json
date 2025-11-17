@@ -1,0 +1,5 @@
+{
+  "name": "Stanley's Cafe Chatbot",
+  "description": "A WhatsApp-style chatbot for Stanley's Cafe where customers can place orders and an admin can approve them for delivery.",
+  "requestFramePermissions": []
+}
