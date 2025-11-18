@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Message, MessageSender, MenuItem } from '../types';
 import UserIcon from './icons/UserIcon';
@@ -25,7 +24,15 @@ const MenuCard: React.FC<{ item: MenuItem }> = ({ item }) => (
 
 const ChatInterface: React.FC<ChatInterfaceProps> = ({ messages, onSendMessage, isBotTyping }) => {
   const [inputValue, setInputValue] = useState('');
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const emojiPickerRef = useRef<HTMLDivElement>(null);
+  const emojiButtonRef = useRef<HTMLButtonElement>(null);
+
+  const EMOJI_LIST = [
+    '😀', '😂', '😍', '🤔', '👍', '❤️', '🎉', '🔥', '👋', '😢', '🙏', '💯',
+    '😊', '🥳', '😎', '😭', '🤯', '😱', '🙄', '🙌', '😮', '💀', '🚀', '👀'
+  ];
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -34,6 +41,25 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ messages, onSendMessage, 
   useEffect(() => {
     scrollToBottom();
   }, [messages, isBotTyping]);
+  
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+        if (
+            showEmojiPicker &&
+            emojiPickerRef.current &&
+            !emojiPickerRef.current.contains(event.target as Node) &&
+            emojiButtonRef.current &&
+            !emojiButtonRef.current.contains(event.target as Node)
+        ) {
+            setShowEmojiPicker(false);
+        }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+    };
+}, [showEmojiPicker]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInputValue(e.target.value);
@@ -56,6 +82,11 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ messages, onSendMessage, 
     onSendMessage("Show me the menu");
   };
 
+  const handleEmojiSelect = (emoji: string) => {
+    setInputValue(prev => prev + emoji);
+    setShowEmojiPicker(false);
+  };
+
   return (
     <div className="flex flex-col h-full w-full max-w-4xl mx-auto bg-white shadow-2xl rounded-lg overflow-hidden">
       {/* Header */}
@@ -74,8 +105,12 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ messages, onSendMessage, 
             <div key={msg.id} className={`flex items-end gap-3 ${msg.sender === MessageSender.USER ? 'justify-end' : 'justify-start'}`}>
               {msg.sender !== MessageSender.USER && <BotIcon className="h-8 w-8 text-gray-400" />}
               {msg.sender === MessageSender.SYSTEM ? (
-                 <div className="text-center w-full my-2">
-                    <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-1.5 rounded-full">{msg.text}</span>
+                 <div className="flex justify-center w-full my-2">
+                    {typeof msg.text === 'string' ? (
+                        <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-1.5 rounded-full">{msg.text}</span>
+                    ) : (
+                        msg.text
+                    )}
                  </div>
               ) : (
                 <div className={`rounded-xl px-4 py-2 max-w-md shadow-sm ${msg.sender === MessageSender.USER ? 'bg-green-100 text-gray-800' : 'bg-white text-gray-800'}`}>
@@ -103,17 +138,50 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ messages, onSendMessage, 
       </main>
 
       {/* Input */}
-      <footer className="bg-gray-100 p-4 border-t border-gray-200">
+      <footer className="relative bg-gray-100 p-4 border-t border-gray-200">
+        {showEmojiPicker && (
+            <div 
+            ref={emojiPickerRef} 
+            className="absolute bottom-full mb-2 left-0 md:left-auto bg-white p-3 rounded-xl shadow-lg border z-20"
+            style={{ width: '300px' }}
+            >
+                <div className="grid grid-cols-8 gap-1">
+                    {EMOJI_LIST.map(emoji => (
+                        <button
+                            key={emoji}
+                            onClick={() => handleEmojiSelect(emoji)}
+                            className="text-2xl p-1 rounded-lg hover:bg-gray-100 transition-colors"
+                            title={emoji}
+                            aria-label={emoji}
+                        >
+                            {emoji}
+                        </button>
+                    ))}
+                </div>
+            </div>
+        )}
         <div className="flex items-center space-x-3">
-          <button onClick={handleShowMenu} className="px-3 py-2 text-sm bg-white border border-gray-300 rounded-full hover:bg-gray-50">View Menu</button>
-          <input
-            type="text"
-            value={inputValue}
-            onChange={handleInputChange}
-            onKeyPress={handleKeyPress}
-            placeholder="Type a message..."
-            className="flex-1 p-3 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-teal-500"
-          />
+          <button onClick={handleShowMenu} className="px-3 py-2 text-sm bg-white border border-gray-300 rounded-full hover:bg-gray-50 flex-shrink-0">View Menu</button>
+          <div className="relative flex-1">
+              <input
+                  type="text"
+                  value={inputValue}
+                  onChange={handleInputChange}
+                  onKeyPress={handleKeyPress}
+                  placeholder="Type a message..."
+                  className="w-full p-3 pl-12 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-teal-500"
+              />
+              <button
+                  ref={emojiButtonRef}
+                  onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                  className="absolute left-2 top-1/2 -translate-y-1/2 p-2 text-gray-400 hover:text-teal-600 rounded-full"
+                  aria-label="Add emoji"
+              >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+              </button>
+          </div>
           <button
             onClick={handleSendClick}
             className="bg-teal-600 text-white rounded-full p-3 hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 transition-transform duration-150 transform active:scale-95"
